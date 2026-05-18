@@ -1,0 +1,61 @@
+# render.yaml  –  Render free-tier deployment config
+# Place this file in the root of your Git repository
+
+services:
+  # ── Backend API (Node.js) ──────────────────────────
+  - type: web
+    name: aeronetb-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PG_HOST
+        fromDatabase:
+          name: aeronetb-postgres
+          property: host
+      - key: PG_PORT
+        fromDatabase:
+          name: aeronetb-postgres
+          property: port
+      - key: PG_DATABASE
+        fromDatabase:
+          name: aeronetb-postgres
+          property: database
+      - key: PG_USER
+        fromDatabase:
+          name: aeronetb-postgres
+          property: user
+      - key: PG_PASSWORD
+        fromDatabase:
+          name: aeronetb-postgres
+          property: password
+      - key: PG_SSL
+        value: "true"
+      - key: MONGO_URI
+        sync: false   # Set manually in Render dashboard from MongoDB Atlas
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_ORIGIN
+        value: https://aeronetb-dashboard.onrender.com
+
+  # ── Frontend (Static Site) ─────────────────────────
+  - type: web
+    name: aeronetb-dashboard
+    runtime: static
+    rootDir: frontend
+    buildCommand: ""          # No build step needed (plain HTML)
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+
+databases:
+  # ── PostgreSQL (free tier) ─────────────────────────
+  - name: aeronetb-postgres
+    databaseName: aeronetb
+    user: aeronetb_user
+    plan: free

@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroNetB ASCM Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── DESIGN TOKENS ───────────────────────────── */
+:root {
+  --bg:        #0a0d14;
+  --bg2:       #111520;
+  --bg3:       #171c2b;
+  --border:    rgba(255,255,255,0.07);
+  --accent:    #00d4ff;
+  --accent2:   #7c5cfc;
+  --warn:      #ffb800;
+  --danger:    #ff4757;
+  --ok:        #2ed573;
+  --text:      #e8ecf4;
+  --muted:     #6b7694;
+  --font-mono: 'Space Mono', monospace;
+  --font:      'DM Sans', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+/* ── LOGIN ───────────────────────────────────── */
+#login-screen {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 30% 50%, rgba(0,212,255,0.06) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 50%, rgba(124,92,252,0.06) 0%, transparent 60%),
+              var(--bg);
+}
+.login-box {
+  width: 420px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 48px 40px;
+}
+.login-logo {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.login-title {
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.login-sub { color: var(--muted); font-size: 13px; margin-bottom: 36px; }
+
+label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.5px; }
+input[type=email], input[type=password], input[type=text], select, textarea {
+  width: 100%; padding: 11px 14px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: var(--font); font-size: 14px;
+  outline: none; transition: border-color 0.2s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+
+.form-group { margin-bottom: 20px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 20px; border-radius: 8px; font-family: var(--font);
+  font-size: 14px; font-weight: 500; cursor: pointer; border: none;
+  transition: all 0.2s; text-decoration: none;
+}
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { background: #00b8d9; }
+.btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg3); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
+.btn-full { width: 100%; }
+
+.demo-accounts { margin-top: 24px; padding: 16px; background: var(--bg3); border-radius: 8px; }
+.demo-title { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+.demo-btn { display: inline-block; margin: 3px; padding: 4px 10px; border-radius: 4px;
+  background: rgba(0,212,255,0.1); color: var(--accent); font-size: 11px; cursor: pointer;
+  border: 1px solid rgba(0,212,255,0.2); font-family: var(--font-mono); }
+.demo-btn:hover { background: rgba(0,212,255,0.2); }
+
+#login-error { color: var(--danger); font-size: 13px; margin-top: 12px; display: none; }
+
+/* ── MAIN LAYOUT ─────────────────────────────── */
+#app { display: none; flex-direction: row; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 220px; background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100;
+}
+.sidebar-logo {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo .logo-tag { font-family: var(--font-mono); font-size: 9px; color: var(--accent); letter-spacing: 3px; }
+.sidebar-logo .logo-name { font-size: 17px; font-weight: 600; margin-top: 2px; }
+
+.nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.nav-section { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; padding: 12px 20px 6px; text-transform: uppercase; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px; cursor: pointer; font-size: 13px; font-weight: 400;
+  color: var(--muted); transition: all 0.15s; border-left: 2px solid transparent;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.nav-item.active { color: var(--accent); background: rgba(0,212,255,0.06); border-left-color: var(--accent); }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-user {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+.user-name { font-size: 13px; font-weight: 500; }
+.user-role { font-size: 11px; color: var(--accent); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1px; }
+.user-logout { font-size: 11px; color: var(--muted); cursor: pointer; margin-top: 6px; }
+.user-logout:hover { color: var(--danger); }
+
+/* Main content */
+.main { margin-left: 220px; flex: 1; padding: 28px; min-height: 100vh; }
+
+.page-header { margin-bottom: 28px; }
+.page-title { font-size: 22px; font-weight: 600; }
+.page-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+/* Cards */
+.cards-row { display: grid; gap: 16px; margin-bottom: 24px; }
+.cards-4 { grid-template-columns: repeat(4, 1fr); }
+.cards-3 { grid-template-columns: repeat(3, 1fr); }
+.cards-2 { grid-template-columns: repeat(2, 1fr); }
+
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px;
+}
+.card-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.kpi-value { font-family: var(--font-mono); font-size: 32px; font-weight: 700; }
+.kpi-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.kpi-accent  { color: var(--accent); }
+.kpi-warn    { color: var(--warn); }
+.kpi-danger  { color: var(--danger); }
+.kpi-ok      { color: var(--ok); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { padding: 10px 14px; text-align: left; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); font-weight: 500; }
+td { padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* Badges */
+.badge {
+  display: inline-block; padding: 2px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 500; text-transform: capitalize;
+}
+.badge-ok      { background: rgba(46,213,115,0.15); color: var(--ok); }
+.badge-warn    { background: rgba(255,184,0,0.15);  color: var(--warn); }
+.badge-danger  { background: rgba(255,71,87,0.15);  color: var(--danger); }
+.badge-info    { background: rgba(0,212,255,0.15);  color: var(--accent); }
+.badge-muted   { background: rgba(107,118,148,0.15); color: var(--muted); }
+
+/* Chart containers */
+.chart-box { position: relative; height: 250px; }
+.chart-box-sm { position: relative; height: 180px; }
+
+/* Toolbar */
+.toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+.toolbar input, .toolbar select { width: auto; }
+.spacer { flex: 1; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; background: var(--bg3); padding: 4px; border-radius: 8px; width: fit-content; margin-bottom: 20px; }
+.tab { padding: 7px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+.tab.active { background: var(--bg2); color: var(--text); }
+
+/* Section divider */
+.section { margin-bottom: 24px; }
+
+/* Alert item */
+.alert-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.alert-icon { font-size: 18px; margin-top: 1px; }
+.alert-body .title { font-size: 13px; font-weight: 500; }
+.alert-body .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.alert-time { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-left: auto; flex-shrink: 0; }
+
+/* IoT gauge strip */
+.gauge-strip { display: flex; gap: 16px; flex-wrap: wrap; }
+.gauge { background: var(--bg3); border-radius: 10px; padding: 14px 18px; min-width: 140px; flex: 1; }
+.gauge-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.gauge-val { font-family: var(--font-mono); font-size: 22px; font-weight: 700; }
+.gauge-unit { font-size: 11px; color: var(--muted); margin-left: 4px; }
+.gauge-bar { height: 4px; background: var(--bg); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+.gauge-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 520px; max-width: 90vw; max-height: 85vh; overflow-y: auto; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.modal-title { font-size: 18px; font-weight: 600; }
+.modal-close { cursor: pointer; color: var(--muted); font-size: 20px; line-height: 1; }
+.modal-close:hover { color: var(--text); }
+
+/* Page visibility */
+.page { display: none; }
+.page.active { display: block; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .cards-4 { grid-template-columns: repeat(2, 1fr); }
+  .cards-3 { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">AeroNetB</div>
+    <div class="login-title">ASCM Platform</div>
+    <div class="login-sub">Aerospace Supply Chain Management</div>
+
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="login-email" placeholder="your@aeronetb.com">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+    <div id="login-error">Invalid email or password.</div>
+
+    <div class="demo-accounts">
+      <div class="demo-title">Demo Accounts (all use: Pass1234!)</div>
+      <div class="demo-btn" onclick="fillDemo('alice@aeronetb.com')">Alice – Procurement</div>
+      <div class="demo-btn" onclick="fillDemo('bob@aeronetb.com')">Bob – Inspector</div>
+      <div class="demo-btn" onclick="fillDemo('carol@aeronetb.com')">Carol – Supply Chain</div>
+      <div class="demo-btn" onclick="fillDemo('david@aeronetb.com')">David – Engineer</div>
+      <div class="demo-btn" onclick="fillDemo('emma@aeronetb.com')">Emma – Auditor</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ APP ═══════════════ -->
+<div id="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-tag">ASCM v2.0</div>
+      <div class="logo-name">AeroNetB</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <span class="nav-icon">⬡</span> Dashboard
+      </div>
+      <div class="nav-section">Operations</div>
+      <div class="nav-item" onclick="showPage('shipments')" id="nav-shipments">
+        <span class="nav-icon">🚢</span> Shipments
+      </div>
+      <div class="nav-item" onclick="showPage('orders')" id="nav-orders">
+        <span class="nav-icon">📋</span> Orders
+      </div>
+      <div class="nav-item" onclick="showPage('suppliers')" id="nav-suppliers">
+        <span class="nav-icon">🏭</span> Suppliers
+      </div>
+      <div class="nav-section">Quality</div>
+      <div class="nav-item" onclick="showPage('qc')" id="nav-qc">
+        <span class="nav-icon">🔬</span> QC Reports
+      </div>
+      <div class="nav-item" onclick="showPage('certs')" id="nav-certs">
+        <span class="nav-icon">📜</span> Certifications
+      </div>
+      <div class="nav-section">Equipment</div>
+      <div class="nav-item" onclick="showPage('iot')" id="nav-iot">
+        <span class="nav-icon">📡</span> IoT Monitor
+      </div>
+      <div class="nav-section" id="audit-section" style="display:none">Compliance</div>
+      <div class="nav-item" onclick="showPage('audit')" id="nav-audit" style="display:none">
+        <span class="nav-icon">🔍</span> Audit Logs
+      </div>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-name" id="sidebar-name">—</div>
+      <div class="user-role" id="sidebar-role">—</div>
+      <div class="user-logout" onclick="doLogout()">↩ Sign out</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ── DASHBOARD ── -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <div class="page-title">Operations Dashboard</div>
+        <div class="page-sub">Real-time overview of supply chain, quality, and equipment</div>
+      </div>
+      <div class="cards-row cards-4" id="kpi-cards">
+        <div class="card"><div class="card-title">Active Orders</div><div class="kpi-value kpi-accent" id="kpi-orders">—</div><div class="kpi-label">purchase orders</div></div>
+        <div class="card"><div class="card-title">Shipments in Transit</div><div class="kpi-value kpi-accent" id="kpi-shipments">—</div><div class="kpi-label">being tracked</div></div>
+        <div class="card"><div class="card-title">QC Pass Rate</div><div class="kpi-value kpi-ok" id="kpi-qc">—</div><div class="kpi-label">last 30 days</div></div>
+        <div class="card"><div class="card-title">Equipment Alerts</div><div class="kpi-value kpi-warn" id="kpi-equip">—</div><div class="kpi-label">warning/critical</div></div>
+      </div>
+      <div class="cards-row cards-2">
+        <div class="card">
+          <div class="card-title">QC Results Trend (12 months)</div>
+          <div class="chart-box"><canvas id="chart-qc-trend"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Supplier On-Time Rate</div>
+          <div class="chart-box"><canvas id="chart-supplier-kpi"></canvas></div>
+        </div>
+      </div>
+      <div class="cards-row cards-2">
+        <div class="card">
+          <div class="card-title">QC Result Distribution</div>
+          <div class="chart-box-sm"><canvas id="chart-qc-dist"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent Alerts</div>
+          <div id="alerts-list"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SHIPMENTS ── -->
+    <div id="page-shipments" class="page">
+      <div class="page-header">
+        <div class="page-title">Shipment Tracking</div>
+        <div class="page-sub">Live shipment locations and order visibility</div>
+      </div>
+      <div class="card section">
+        <div class="card-title">Active Shipments</div>
+        <div class="toolbar">
+          <input type="text" id="ship-search" placeholder="Search tracking / supplier…" oninput="filterShipments()" style="width:240px">
+          <select id="ship-status" onchange="filterShipments()">
+            <option value="">All Statuses</option>
+            <option value="in_transit">In Transit</option>
+            <option value="pending">Pending</option>
+            <option value="delivered">Delivered</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Tracking #</th><th>Supplier</th><th>Part</th>
+              <th>Status</th><th>Last Location</th><th>ETA</th><th>Delayed</th>
+            </tr></thead>
+            <tbody id="shipments-tbody"><tr><td colspan="7" style="color:var(--muted)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ORDERS ── -->
+    <div id="page-orders" class="page">
+      <div class="page-header">
+        <div class="page-title">Purchase Orders</div>
+        <div class="page-sub">Create, track and manage purchase orders</div>
+      </div>
+      <div class="card section">
+        <div class="toolbar">
+          <select id="order-status-filter" onchange="loadOrders()">
+            <option value="">All Statuses</option>
+            <option value="placed">Placed</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="dispatched">Dispatched</option>
+            <option value="completed">Completed</option>
+          </select>
+          <div class="spacer"></div>
+          <button class="btn btn-primary btn-sm" id="btn-new-order" onclick="openOrderModal()" style="display:none">+ New Order</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Order ID</th><th>Supplier</th><th>Part</th><th>Qty</th>
+              <th>Value</th><th>Desired Delivery</th><th>Status</th>
+            </tr></thead>
+            <tbody id="orders-tbody"><tr><td colspan="7" style="color:var(--muted)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SUPPLIERS ── -->
+    <div id="page-suppliers" class="page">
+      <div class="page-header">
+        <div class="page-title">Supplier Management</div>
+        <div class="page-sub">Supplier directory and performance analytics</div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="supplierTab('list',this)">Directory</div>
+        <div class="tab" onclick="supplierTab('kpi',this)">Performance KPIs</div>
+      </div>
+      <div id="suppliers-list-tab">
+        <div class="card section">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Supplier</th><th>Country</th><th>Accreditation</th><th>Contact</th><th>Status</th></tr></thead>
+              <tbody id="suppliers-tbody"><tr><td colspan="5" style="color:var(--muted)">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="suppliers-kpi-tab" style="display:none">
+        <div class="cards-row cards-2">
+          <div class="card"><div class="card-title">On-Time Delivery Rate (%)</div><div class="chart-box"><canvas id="chart-ontime"></canvas></div></div>
+          <div class="card"><div class="card-title">Defect Rate (%)</div><div class="chart-box"><canvas id="chart-defect"></canvas></div></div>
+        </div>
+        <div class="card section">
+          <div class="card-title">Supplier Scorecard</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Supplier</th><th>Total Orders</th><th>On-Time Rate</th><th>QC Reports</th><th>Defect Rate</th><th>Rating</th></tr></thead>
+              <tbody id="kpi-tbody"><tr><td colspan="6" style="color:var(--muted)">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── QC REPORTS ── -->
+    <div id="page-qc" class="page">
+      <div class="page-header">
+        <div class="page-title">Quality Control Reports</div>
+        <div class="page-sub">Inspection results, failure trends, and certification tracking</div>
+      </div>
+      <div class="cards-row cards-3" id="qc-kpis" style="margin-bottom:20px">
+        <div class="card"><div class="card-title">Total Reports</div><div class="kpi-value kpi-accent" id="qc-total">—</div></div>
+        <div class="card"><div class="card-title">Passed</div><div class="kpi-value kpi-ok" id="qc-pass">—</div></div>
+        <div class="card"><div class="card-title">Failed</div><div class="kpi-value kpi-danger" id="qc-fail">—</div></div>
+      </div>
+      <div class="toolbar">
+        <select id="qc-result-filter" onchange="loadQCReports()">
+          <option value="">All Results</option>
+          <option value="pass">Pass</option>
+          <option value="fail">Fail</option>
+          <option value="pending">Pending</option>
+        </select>
+        <select id="qc-type-filter" onchange="loadQCReports()">
+          <option value="">All Types</option>
+          <option value="dimensional">Dimensional</option>
+          <option value="NDT">NDT</option>
+          <option value="visual">Visual</option>
+          <option value="environmental">Environmental</option>
+        </select>
+        <div class="spacer"></div>
+        <button class="btn btn-primary btn-sm" id="btn-new-qc" style="display:none" onclick="openQCModal()">+ New Report</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Report ID</th><th>Order</th><th>Supplier</th><th>Part</th>
+              <th>Type</th><th>Date</th><th>Result</th><th>Inspector</th><th>Finalised</th>
+            </tr></thead>
+            <tbody id="qc-tbody"><tr><td colspan="9" style="color:var(--muted)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CERTIFICATIONS ── -->
+    <div id="page-certs" class="page">
+      <div class="page-header">
+        <div class="page-title">Component Certifications</div>
+        <div class="page-sub">Approved certifications are immutable once locked</div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Cert #</th><th>Part</th><th>Supplier</th><th>Inspector</th>
+              <th>Issue Date</th><th>Expiry</th><th>Status</th><th>Immutable</th>
+            </tr></thead>
+            <tbody id="certs-tbody"><tr><td colspan="8" style="color:var(--muted)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── IoT MONITOR ── -->
+    <div id="page-iot" class="page">
+      <div class="page-header">
+        <div class="page-title">Equipment &amp; IoT Monitor</div>
+        <div class="page-sub">Live sensor data, alerts, and maintenance status</div>
+      </div>
+      <div class="cards-row cards-4" id="iot-summary-cards">
+        <div class="card"><div class="card-title">Operational</div><div class="kpi-value kpi-ok" id="iot-ok">—</div></div>
+        <div class="card"><div class="card-title">Warning</div><div class="kpi-value kpi-warn" id="iot-warn">—</div></div>
+        <div class="card"><div class="card-title">Critical</div><div class="kpi-value kpi-danger" id="iot-crit">—</div></div>
+        <div class="card"><div class="card-title">Offline</div><div class="kpi-value kpi-muted" id="iot-off">—</div></div>
+      </div>
+      <div class="card section">
+        <div class="card-title">Equipment Status</div>
+        <div id="equipment-list"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+      </div>
+      <div class="card section" id="iot-chart-card">
+        <div class="card-title">Live Sensor – <span id="selected-equip-name">Select equipment above</span></div>
+        <div class="gauge-strip" id="gauges"></div>
+        <div style="height:16px"></div>
+        <div class="chart-box"><canvas id="chart-iot-live"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── AUDIT ── -->
+    <div id="page-audit" class="page">
+      <div class="page-header">
+        <div class="page-title">Audit Logs</div>
+        <div class="page-sub">Complete access and modification history (Auditor only)</div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Timestamp</th><th>Employee</th><th>Role</th><th>Action</th><th>Table</th><th>Record ID</th><th>Description</th></tr></thead>
+            <tbody id="audit-tbody"><tr><td colspan="7" style="color:var(--muted)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═════ MODALS ════════════════════════════════ -->
+<!-- New Order Modal -->
+<div class="modal-overlay" id="order-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Purchase Order</div>
+      <div class="modal-close" onclick="closeModal('order-modal')">✕</div>
+    </div>
+    <div class="form-group"><label>Supplier ID</label><input type="number" id="new-order-supplier" placeholder="e.g. 1"></div>
+    <div class="form-group"><label>Supplier Part ID</label><input type="number" id="new-order-part" placeholder="e.g. 1"></div>
+    <div class="form-group"><label>Order Date</label><input type="text" id="new-order-date" placeholder="YYYY-MM-DD"></div>
+    <div class="form-group"><label>Desired Delivery</label><input type="text" id="new-order-delivery" placeholder="YYYY-MM-DD"></div>
+    <div class="form-group"><label>Quantity</label><input type="number" id="new-order-qty" placeholder="1"></div>
+    <div class="form-group"><label>Total Value (£)</label><input type="number" id="new-order-value" placeholder="0.00"></div>
+    <div class="form-group"><label>Notes</label><textarea id="new-order-notes" rows="3"></textarea></div>
+    <button class="btn btn-primary btn-full" onclick="submitOrder()">Create Order</button>
+  </div>
+</div>
+
+<!-- New QC Modal -->
+<div class="modal-overlay" id="qc-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New QC Report</div>
+      <div class="modal-close" onclick="closeModal('qc-modal')">✕</div>
+    </div>
+    <div class="form-group"><label>Order ID</label><input type="number" id="new-qc-order" placeholder="e.g. 1"></div>
+    <div class="form-group"><label>Report Type</label>
+      <select id="new-qc-type">
+        <option value="dimensional">Dimensional</option>
+        <option value="NDT">NDT</option>
+        <option value="visual">Visual</option>
+        <option value="environmental">Environmental</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Inspection Date</label><input type="text" id="new-qc-date" placeholder="YYYY-MM-DD"></div>
+    <div class="form-group"><label>Overall Result</label>
+      <select id="new-qc-result">
+        <option value="pass">Pass</option>
+        <option value="fail">Fail</option>
+        <option value="pending">Pending</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea id="new-qc-notes" rows="3"></textarea></div>
+    <button class="btn btn-primary btn-full" onclick="submitQC()">Submit Report</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// CONFIG – change API_BASE to your Render backend URL
+// ═══════════════════════════════════════════════════
+const API_BASE = 'http://localhost:3000/api'; // ← update with Render URL
+
+let token = null;
+let currentUser = null;
+let iotChart = null;
+let iotInterval = null;
+let selectedEquipId = null;
+let shipmentsData = [];
+
+// ── AUTH ──────────────────────────────────────────
+function fillDemo(email) {
+  document.getElementById('login-email').value = email;
+  document.getElementById('login-password').value = 'Pass1234!';
+}
+
+async function doLogin() {
+  const email    = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const errEl    = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    if (!res.ok) { errEl.style.display = 'block'; return; }
+    const data = await res.json();
+    token = data.token;
+    currentUser = data.user;
+    initApp();
+  } catch (e) {
+    errEl.textContent = 'Cannot reach server. Is the backend running?';
+    errEl.style.display = 'block';
+  }
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+function doLogout() {
+  token = null; currentUser = null;
+  clearInterval(iotInterval);
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ── APP INIT ──────────────────────────────────────
+function initApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('sidebar-name').textContent = currentUser.name;
+  document.getElementById('sidebar-role').textContent = currentUser.role.replace(/_/g,' ');
+
+  // Role-based UI adjustments
+  const role = currentUser.role;
+  if (role === 'procurement_officer') {
+    document.getElementById('btn-new-order').style.display = 'inline-flex';
+  }
+  if (role === 'quality_inspector') {
+    document.getElementById('btn-new-qc').style.display = 'inline-flex';
+  }
+  if (role === 'auditor') {
+    document.getElementById('nav-audit').style.display = 'flex';
+    document.getElementById('audit-section').style.display = 'block';
+  }
+
+  loadDashboard();
+}
+
+// ── NAVIGATION ────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  const navEl = document.getElementById(`nav-${name}`);
+  if (navEl) navEl.classList.add('active');
+
+  // Lazy load
+  if (name === 'dashboard')  loadDashboard();
+  if (name === 'shipments')  loadShipments();
+  if (name === 'orders')     loadOrders();
+  if (name === 'suppliers')  { loadSuppliers(); loadSupplierKPI(); }
+  if (name === 'qc')         { loadQCReports(); loadQCStats(); }
+  if (name === 'certs')      loadCerts();
+  if (name === 'iot')        loadIoT();
+  if (name === 'audit')      loadAuditLogs();
+}
+
+// ── API HELPER ────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...(opts.headers||{}) }
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
+
+// ── DASHBOARD ─────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const [summary, kpi, qcStats] = await Promise.all([
+      api('/dashboard/summary'),
+      api('/dashboard/supplier-kpi'),
+      api('/qc/stats')
+    ]);
+
+    // KPI cards
+    document.getElementById('kpi-orders').textContent    = summary.orders.dispatched ?? '—';
+    document.getElementById('kpi-shipments').textContent = summary.shipments.in_transit ?? '—';
+    const passRate = qcStats.total ? Math.round((qcStats.by_result.find(r=>r.overall_result==='pass')?.count || 0) / qcStats.total * 100) : '—';
+    document.getElementById('kpi-qc').textContent = passRate + (passRate !== '—' ? '%' : '');
+    const alertCount = parseInt(summary.equipment.warning||0) + parseInt(summary.equipment.critical||0);
+    document.getElementById('kpi-equip').textContent = alertCount;
+
+    // QC Trend chart
+    renderQCTrend(qcStats.monthly_trend);
+
+    // Supplier KPI chart
+    renderSupplierChart(kpi);
+
+    // QC Distribution donut
+    renderQCDist(qcStats.by_result);
+
+    // Alerts list
+    const alerts = await api('/iot/alerts');
+    renderAlerts(alerts.slice(0,6));
+
+  } catch (e) { console.error(e); }
+}
+
+function renderQCTrend(data) {
+  const ctx = document.getElementById('chart-qc-trend');
+  if (!ctx) return;
+  if (ctx._chart) ctx._chart.destroy();
+  ctx._chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.month),
+      datasets: [
+        { label: 'Passed', data: data.map(d => d.passed), borderColor: '#2ed573', backgroundColor: 'rgba(46,213,115,0.1)', tension: 0.4, fill: true },
+        { label: 'Failed', data: data.map(d => d.failed), borderColor: '#ff4757', backgroundColor: 'rgba(255,71,87,0.1)', tension: 0.4, fill: true }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#6b7694', font: { size: 11 } } } }, scales: { x: { ticks: { color: '#6b7694' }, grid: { color: 'rgba(255,255,255,0.04)' } }, y: { ticks: { color: '#6b7694' }, grid: { color: 'rgba(255,255,255,0.04)' } } } }
+  });
+}
+
+function renderSupplierChart(kpi) {
+  const ctx = document.getElementById('chart-supplier-kpi');
+  if (!ctx) return;
+  if (ctx._chart) ctx._chart.destroy();
+  ctx._chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: kpi.map(k => k.business_name.split(' ')[0]),
+      datasets: [{ label: 'On-Time %', data: kpi.map(k => k.on_time_rate_pct||0), backgroundColor: 'rgba(0,212,255,0.6)', borderRadius: 4 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#6b7694' }, grid: { display: false } }, y: { max: 100, ticks: { color: '#6b7694' }, grid: { color: 'rgba(255,255,255,0.04)' } } } }
+  });
+}
+
+function renderQCDist(data) {
+  const ctx = document.getElementById('chart-qc-dist');
+  if (!ctx) return;
+  if (ctx._chart) ctx._chart.destroy();
+  const colorMap = { pass: '#2ed573', fail: '#ff4757', pending: '#ffb800' };
+  ctx._chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: data.map(d => d.overall_result), datasets: [{ data: data.map(d => d.count), backgroundColor: data.map(d => colorMap[d.overall_result]||'#6b7694'), borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right', labels: { color: '#6b7694', font: { size: 11 } } } } }
+  });
+}
+
+function renderAlerts(alerts) {
+  const el = document.getElementById('alerts-list');
+  if (!alerts.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">No recent alerts</div>'; return; }
+  el.innerHTML = alerts.map(a => `
+    <div class="alert-item">
+      <div class="alert-icon">${a.alert_triggered ? '⚠️' : 'ℹ️'}</div>
+      <div class="alert-body">
+        <div class="title">${a.equipment_name} – ${a.equipment_status}</div>
+        <div class="sub">Temp: ${a.temperature_c}°C | Vib: ${a.vibration_hz} Hz | Press: ${a.pressure_bar} bar</div>
+      </div>
+      <div class="alert-time">${new Date(a.timestamp).toLocaleTimeString()}</div>
+    </div>
+  `).join('');
+}
+
+// ── SHIPMENTS ─────────────────────────────────────
+async function loadShipments() {
+  try {
+    const data = await api('/dashboard/shipments-map');
+    shipmentsData = data;
+    renderShipments(data);
+  } catch (e) { console.error(e); }
+}
+
+function renderShipments(data) {
+  const tbody = document.getElementById('shipments-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted)">No active shipments</td></tr>'; return; }
+  tbody.innerHTML = data.map(s => `
+    <tr>
+      <td><span style="font-family:var(--font-mono);font-size:12px">${s.tracking_number||'—'}</span></td>
+      <td>${s.supplier_name}</td>
+      <td>${s.part_name}</td>
+      <td>${statusBadge(s.status)}</td>
+      <td>${s.last_location||'—'}</td>
+      <td>${s.estimated_arrival||'—'}</td>
+      <td>${s.is_delayed ? '<span class="badge badge-danger">Delayed</span>' : '<span class="badge badge-ok">On Track</span>'}</td>
+    </tr>
+  `).join('');
+}
+
+function filterShipments() {
+  const q = document.getElementById('ship-search').value.toLowerCase();
+  const st = document.getElementById('ship-status').value;
+  const filtered = shipmentsData.filter(s =>
+    (!q || (s.tracking_number||'').toLowerCase().includes(q) || s.supplier_name.toLowerCase().includes(q)) &&
+    (!st || s.status === st)
+  );
+  renderShipments(filtered);
+}
+
+// ── ORDERS ────────────────────────────────────────
+async function loadOrders() {
+  try {
+    const status = document.getElementById('order-status-filter').value;
+    const qs = status ? `?status=${status}` : '';
+    const data = await api(`/orders${qs}`);
+    const tbody = document.getElementById('orders-tbody');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted)">No orders found</td></tr>'; return; }
+    tbody.innerHTML = data.map(o => `
+      <tr>
+        <td>#${o.order_id}</td>
+        <td>${o.supplier_name}</td>
+        <td>${o.part_name}</td>
+        <td>${o.quantity}</td>
+        <td>£${Number(o.total_value||0).toLocaleString()}</td>
+        <td>${o.desired_delivery||'—'}</td>
+        <td>${statusBadge(o.status)}</td>
+      </tr>
+    `).join('');
+  } catch (e) { console.error(e); }
+}
+
+// ── SUPPLIERS ─────────────────────────────────────
+async function loadSuppliers() {
+  try {
+    const data = await api('/suppliers');
+    const tbody = document.getElementById('suppliers-tbody');
+    tbody.innerHTML = data.map(s => `
+      <tr>
+        <td><strong>${s.business_name}</strong></td>
+        <td>${s.city}, ${s.country}</td>
+        <td><span class="badge badge-info">${s.accreditation_status||'—'}</span></td>
+        <td>${s.contact_email||'—'}</td>
+        <td>${s.is_active ? '<span class="badge badge-ok">Active</span>' : '<span class="badge badge-muted">Inactive</span>'}</td>
+      </tr>
+    `).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function loadSupplierKPI() {
+  try {
+    const data = await api('/dashboard/supplier-kpi');
+    const tbody = document.getElementById('kpi-tbody');
+    tbody.innerHTML = data.map(s => {
+      const rate = s.on_time_rate_pct;
+      const rating = rate >= 90 ? '⭐⭐⭐' : rate >= 70 ? '⭐⭐' : '⭐';
+      return `<tr>
+        <td><strong>${s.business_name}</strong></td>
+        <td>${s.total_orders}</td>
+        <td><span class="badge ${rate>=80?'badge-ok':rate>=60?'badge-warn':'badge-danger'}">${rate||0}%</span></td>
+        <td>${s.total_qc_reports}</td>
+        <td><span class="badge ${s.defect_rate_pct<=5?'badge-ok':s.defect_rate_pct<=15?'badge-warn':'badge-danger'}">${s.defect_rate_pct||0}%</span></td>
+        <td>${rating}</td>
+      </tr>`;
+    }).join('');
+
+    // KPI charts
+    const ontimeCtx = document.getElementById('chart-ontime');
+    if (ontimeCtx._chart) ontimeCtx._chart.destroy();
+    ontimeCtx._chart = new Chart(ontimeCtx, {
+      type:'bar', data:{ labels:data.map(d=>d.business_name.split(' ')[0]), datasets:[{label:'On-Time %',data:data.map(d=>d.on_time_rate_pct||0),backgroundColor:'rgba(0,212,255,0.6)',borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6b7694'},grid:{display:false}},y:{max:100,ticks:{color:'#6b7694'},grid:{color:'rgba(255,255,255,0.04)'}}}}
+    });
+
+    const defectCtx = document.getElementById('chart-defect');
+    if (defectCtx._chart) defectCtx._chart.destroy();
+    defectCtx._chart = new Chart(defectCtx, {
+      type:'bar', data:{ labels:data.map(d=>d.business_name.split(' ')[0]), datasets:[{label:'Defect %',data:data.map(d=>d.defect_rate_pct||0),backgroundColor:'rgba(255,71,87,0.6)',borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6b7694'},grid:{display:false}},y:{ticks:{color:'#6b7694'},grid:{color:'rgba(255,255,255,0.04)'}}}}
+    });
+  } catch (e) { console.error(e); }
+}
+
+function supplierTab(tab, el) {
+  document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('suppliers-list-tab').style.display = tab === 'list' ? 'block' : 'none';
+  document.getElementById('suppliers-kpi-tab').style.display  = tab === 'kpi'  ? 'block' : 'none';
+}
+
+// ── QC ────────────────────────────────────────────
+async function loadQCReports() {
+  try {
+    const result = document.getElementById('qc-result-filter').value;
+    const type   = document.getElementById('qc-type-filter').value;
+    let qs = new URLSearchParams();
+    if (result) qs.set('result', result);
+    if (type)   qs.set('report_type', type);
+    const data = await api(`/qc/reports?${qs}`);
+    const tbody = document.getElementById('qc-tbody');
+    tbody.innerHTML = data.map(r => `
+      <tr>
+        <td>#${r.report_id}</td>
+        <td>#${r.order_id}</td>
+        <td>${r.supplier_name||'—'}</td>
+        <td>${r.part_name||'—'}</td>
+        <td><span class="badge badge-muted">${r.report_type}</span></td>
+        <td>${r.inspection_date}</td>
+        <td>${resultBadge(r.overall_result)}</td>
+        <td>${r.inspector_name||'—'}</td>
+        <td>${r.is_finalized ? '<span class="badge badge-ok">Yes</span>' : '<span class="badge badge-warn">No</span>'}</td>
+      </tr>
+    `).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function loadQCStats() {
+  try {
+    const s = await api('/qc/stats');
+    document.getElementById('qc-total').textContent = s.total;
+    document.getElementById('qc-pass').textContent  = s.by_result.find(r=>r.overall_result==='pass')?.count || 0;
+    document.getElementById('qc-fail').textContent  = s.by_result.find(r=>r.overall_result==='fail')?.count || 0;
+  } catch (e) {}
+}
+
+// ── CERTIFICATIONS ────────────────────────────────
+async function loadCerts() {
+  try {
+    const data = await api('/qc/certifications');
+    const tbody = document.getElementById('certs-tbody');
+    tbody.innerHTML = data.map(c => `
+      <tr>
+        <td><span style="font-family:var(--font-mono);font-size:11px">${c.cert_number}</span></td>
+        <td>${c.part_name||'—'}</td>
+        <td>${c.supplier_name||'—'}</td>
+        <td>${c.inspector_name||'—'}</td>
+        <td>${c.issue_date||'—'}</td>
+        <td>${c.expiry_date||'—'}</td>
+        <td>${statusBadge(c.status)}</td>
+        <td>${c.is_immutable ? '<span class="badge badge-danger">🔒 Locked</span>' : '<span class="badge badge-muted">Draft</span>'}</td>
+      </tr>
+    `).join('');
+  } catch (e) { console.error(e); }
+}
+
+// ── IoT ───────────────────────────────────────────
+async function loadIoT() {
+  try {
+    const data = await api('/iot/dashboard');
+    document.getElementById('iot-ok').textContent   = data.summary.operational || 0;
+    document.getElementById('iot-warn').textContent = data.summary.warning || 0;
+    document.getElementById('iot-crit').textContent = data.summary.critical || 0;
+    document.getElementById('iot-off').textContent  = data.summary.offline || 0;
+
+    const el = document.getElementById('equipment-list');
+    el.innerHTML = data.equipment.map(e => `
+      <div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer"
+           onclick="selectEquipment(${e.equipment_id},'${e.equipment_name}')">
+        <div style="width:10px;height:10px;border-radius:50%;background:${e.status==='operational'?'var(--ok)':e.status==='warning'?'var(--warn)':'var(--danger)'}"></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:500">${e.equipment_name}</div>
+          <div style="font-size:11px;color:var(--muted)">${e.facility}</div>
+        </div>
+        <div style="text-align:right;font-size:12px;font-family:var(--font-mono)">
+          <div style="color:var(--text)">${e.last_temp ? e.last_temp+'°C' : '—'}</div>
+          <div style="color:var(--muted)">${e.last_vibration ? e.last_vibration+' Hz' : '—'}</div>
+        </div>
+        <span class="badge ${e.status==='operational'?'badge-ok':e.status==='warning'?'badge-warn':'badge-danger'}">${e.status}</span>
+      </div>
+    `).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function selectEquipment(id, name) {
+  selectedEquipId = id;
+  document.getElementById('selected-equip-name').textContent = name;
+  clearInterval(iotInterval);
+  await fetchIoTReadings(id);
+  iotInterval = setInterval(() => fetchIoTReadings(id), 5000);
+}
+
+async function fetchIoTReadings(id) {
+  try {
+    const data = await api(`/iot/readings/${id}?limit=20`);
+    if (!data.length) return;
+
+    // Update gauges
+    const latest = data[data.length - 1];
+    document.getElementById('gauges').innerHTML = `
+      <div class="gauge">
+        <div class="gauge-label">Temperature</div>
+        <div class="gauge-val">${latest.temperature_c||'—'}<span class="gauge-unit">°C</span></div>
+        <div class="gauge-bar"><div class="gauge-fill" style="width:${Math.min((latest.temperature_c/200)*100,100)}%;background:${latest.temperature_c>90?'var(--danger)':'var(--ok)'}"></div></div>
+      </div>
+      <div class="gauge">
+        <div class="gauge-label">Vibration</div>
+        <div class="gauge-val">${latest.vibration_hz||'—'}<span class="gauge-unit">Hz</span></div>
+        <div class="gauge-bar"><div class="gauge-fill" style="width:${Math.min((latest.vibration_hz/1)*100,100)}%;background:${latest.vibration_hz>0.35?'var(--danger)':'var(--ok)'}"></div></div>
+      </div>
+      <div class="gauge">
+        <div class="gauge-label">Pressure</div>
+        <div class="gauge-val">${latest.pressure_bar||'—'}<span class="gauge-unit">bar</span></div>
+        <div class="gauge-bar"><div class="gauge-fill" style="width:${Math.min((latest.pressure_bar/200)*100,100)}%;background:${latest.pressure_bar>170?'var(--danger)':'var(--accent2)'}"></div></div>
+      </div>
+    `;
+
+    // Update chart
+    const ctx = document.getElementById('chart-iot-live');
+    const labels = data.map(d => new Date(d.timestamp).toLocaleTimeString());
+    if (iotChart) iotChart.destroy();
+    iotChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Temp (°C)', data: data.map(d => d.temperature_c), borderColor: '#ffb800', tension: 0.4, yAxisID: 'y' },
+          { label: 'Vibration (Hz×100)', data: data.map(d => (d.vibration_hz||0)*100), borderColor: '#00d4ff', tension: 0.4, yAxisID: 'y' }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#6b7694', font: { size: 11 } } } }, scales: { x: { ticks: { color: '#6b7694', maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' } }, y: { ticks: { color: '#6b7694' }, grid: { color: 'rgba(255,255,255,0.04)' } } } }
+    });
+  } catch (e) { console.error(e); }
+}
+
+// ── AUDIT LOGS ────────────────────────────────────
+async function loadAuditLogs() {
+  try {
+    const data = await api('/dashboard/audit-logs');
+    const tbody = document.getElementById('audit-tbody');
+    tbody.innerHTML = data.map(l => `
+      <tr>
+        <td style="font-family:var(--font-mono);font-size:11px">${new Date(l.timestamp).toLocaleString()}</td>
+        <td>${l.full_name||'—'}</td>
+        <td><span class="badge badge-info">${(l.role_name||'').replace(/_/g,' ')}</span></td>
+        <td><span class="badge ${l.action==='approve'?'badge-ok':l.action==='create'?'badge-info':l.action==='view'?'badge-muted':'badge-warn'}">${l.action}</span></td>
+        <td style="font-family:var(--font-mono);font-size:11px">${l.table_name||'—'}</td>
+        <td>${l.record_id||'—'}</td>
+        <td style="color:var(--muted);font-size:12px">${l.description||'—'}</td>
+      </tr>
+    `).join('');
+  } catch (e) { console.error(e); }
+}
+
+// ── MODALS ────────────────────────────────────────
+function openOrderModal() { document.getElementById('order-modal').classList.add('open'); }
+function openQCModal()    { document.getElementById('qc-modal').classList.add('open'); }
+function closeModal(id)   { document.getElementById(id).classList.remove('open'); }
+
+async function submitOrder() {
+  try {
+    await api('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        supplier_id:       parseInt(document.getElementById('new-order-supplier').value),
+        supplier_part_id:  parseInt(document.getElementById('new-order-part').value),
+        order_date:        document.getElementById('new-order-date').value,
+        desired_delivery:  document.getElementById('new-order-delivery').value,
+        quantity:          parseInt(document.getElementById('new-order-qty').value),
+        total_value:       parseFloat(document.getElementById('new-order-value').value),
+        notes:             document.getElementById('new-order-notes').value
+      })
+    });
+    closeModal('order-modal');
+    loadOrders();
+  } catch (e) { alert('Failed to create order: ' + e.message); }
+}
+
+async function submitQC() {
+  try {
+    await api('/qc/reports', {
+      method: 'POST',
+      body: JSON.stringify({
+        order_id:       parseInt(document.getElementById('new-qc-order').value),
+        report_type:    document.getElementById('new-qc-type').value,
+        inspection_date:document.getElementById('new-qc-date').value,
+        overall_result: document.getElementById('new-qc-result').value,
+        notes:          document.getElementById('new-qc-notes').value
+      })
+    });
+    closeModal('qc-modal');
+    loadQCReports();
+  } catch (e) { alert('Failed to submit report: ' + e.message); }
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ── HELPERS ───────────────────────────────────────
+function statusBadge(s) {
+  const map = { placed:'badge-muted', confirmed:'badge-info', dispatched:'badge-warn', delivered:'badge-ok', completed:'badge-ok', cancelled:'badge-danger', in_transit:'badge-warn', pending:'badge-muted', arrived:'badge-ok', approved:'badge-ok', draft:'badge-muted', revoked:'badge-danger' };
+  return `<span class="badge ${map[s]||'badge-muted'}">${(s||'').replace(/_/g,' ')}</span>`;
+}
+
+function resultBadge(r) {
+  const map = { pass:'badge-ok', fail:'badge-danger', pending:'badge-warn' };
+  return `<span class="badge ${map[r]||'badge-muted'}">${r}</span>`;
+}
+</script>
+</body>
+</html>
